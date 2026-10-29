@@ -1,0 +1,214 @@
+{
+  "name": "Assistente de Investimentos RPA",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        0
+      ],
+      "id": "4cf3a0ac-6796-45e0-b437-dd59a2dd28b3",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://raw.githubusercontent.com/mateus-programmer/dio-lab-assistente-investimentos-rpa-n8n/main/docs/data.csv",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -736,
+        0
+      ],
+      "id": "69603fde-ebb3-426d-bd4a-ef8b0e32bcf0",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pega o texto cru do CSV que veio do nó anterior\nconst csvText = $input.item.json.data;\n\n// Divide o texto em linhas e separa o cabeçalho\nconst lines = csvText.trim().split('\\n');\nconst headers = lines[0].split(',');\n\nconst outputItems = [];\n\n// Converte cada linha do CSV em um objeto JSON estruturado\nfor (let i = 1; i < lines.length; i++) {\n  const currentLine = lines[i].split(',');\n  const obj = {};\n  for (let j = 0; j < headers.length; j++) {\n    obj[headers[j].trim()] = currentLine[j] ? currentLine[j].trim() : '';\n  }\n  outputItems.push({ json: obj });\n}\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -512,
+        0
+      ],
+      "id": "fb503814-152b-43e3-8850-d0401288fbfc",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "url": "https://digitalinnovationone.github.io/dio-lab-assistente-investimentos-rpa-n8n/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -288,
+        0
+      ],
+      "id": "e8a81757-8df1-4591-8480-1a45a6893bfd",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "nome",
+              "cssSelector": "table tr td:nth-child(1)",
+              "returnArray": true
+            },
+            {
+              "key": "email",
+              "cssSelector": "table tr td:nth-child(2)",
+              "returnArray": true
+            },
+            {
+              "key": "saldo",
+              "cssSelector": "table tr td:nth-child(3)",
+              "returnArray": true
+            },
+            {
+              "key": "perfil",
+              "cssSelector": "table tr td:nth-child(4)",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "79d82c1c-95a7-49c3-a6f3-19722defb500",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pega os produtos vindos do 3º nó (Code in JavaScript)\nconst produtos = $items(\"Code in JavaScript\").map(item => item.json);\n\n// Pega os dados dos clientes vindos do 5º nó (HTML)\nconst htmlData = $items(\"HTML\")[0].json;\nconst nomes = htmlData.nome || [];\nconst emails = htmlData.email || [];\nconst saldos = htmlData.saldo || [];\nconst perfis = htmlData.perfil || [];\n\nconst recomendacoes = [];\n\n// Cruza os clientes com as opções de investimento do seu perfil\nfor (let i = 0; i < nomes.length; i++) {\n  const perfilCliente = perfis[i];\n  \n  const opcoesRecomendadas = produtos.filter(p => p.perfil.toLowerCase() === perfilCliente.toLowerCase());\n\n  recomendacoes.push({\n    json: {\n      cliente: nomes[i],\n      email: emails[i],\n      saldo: saldos[i],\n      perfil: perfilCliente,\n      recomendacoes: opcoesRecomendadas\n    }\n  });\n}\n\nreturn recomendacoes;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        0
+      ],
+      "id": "8dd3897d-a0f1-4b32-9850-8ae61234333c",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "Suas recomendações de investimentos personalizadas",
+        "message": "=<p>Olá, <b>{{ $json.cliente }}</b>!</p>\n<p>Notamos que o seu perfil é <b>{{ $json.perfil }}</b> e preparamos as melhores opções de investimento para o seu saldo atual de <b>{{ $json.saldo }}</b>.</p>\n<p>Boas práticas de investimentos!</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        384,
+        0
+      ],
+      "id": "10c67b5e-2b85-408b-a2ee-6df88d6aac49",
+      "name": "Send a message",
+      "webhookId": "b7804cc5-4bd1-4cf8-9489-39a9ca0fae52",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "soL0SQSVsLCBq6dm",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "d66eb65f-26a1-454c-b579-7b1d4ed8274b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "44fbad7276baec5011182ebd2f751814882d3aa43cffce701a110408db656802"
+  },
+  "nodeGroups": [],
+  "id": "Ug5GGDHxeCcsAlGp",
+  "tags": []
+}
